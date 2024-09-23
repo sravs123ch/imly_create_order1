@@ -24,6 +24,7 @@ import { CustomerProvider } from "./Context/customerContext";
 import { RoleProvider } from "./Context/roleContext";
 import UserRoleform from "./components/UserRoles/UserRoleform";
 import UserRoles from "./components/UserRoles/UserRole";
+import { IdProvider } from './Context/IdContex';
 
 import { PaymentProvider } from "./Context/paymentContext";
 import Paymentform from "./components/Payments/Paymentform";
@@ -51,6 +52,7 @@ function App() {
                 <PaymentProvider>
                   <LoadingProvider>
                     <OrderProvider>
+                    <IdProvider>
                       <Routes>
                         <Route path="/" element={<Login />} />
                         <Route path="/product" element={<ProductPage />} />
@@ -86,6 +88,7 @@ function App() {
                         <Route path="/Returns" element={<Returns />} />
                         <Route path="/production" element={<Production />} />
                       </Routes>
+                      </IdProvider>
                     </OrderProvider>
                   </LoadingProvider>
                 </PaymentProvider>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useContext,useEffect } from 'react';
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Paper, IconButton } from '@mui/material';
 import { FaUpload, FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { IoMdAddCircleOutline } from 'react-icons/io';
@@ -9,6 +9,9 @@ import Step2 from './payment';
 import { useNavigate } from 'react-router-dom';
 import {CREATEORUPDATE_ORDER_HISTORY__API} from "../../Constants/apiRoutes";
 import LoadingAnimation from '../../components/Loading/LoadingAnimation';
+import { IdContext } from '../../Context/IdContex';
+import { GETORDERBYID_API } from "../../Constants/apiRoutes";
+
 
 
 const YourComponent = ({ onBack, onNext }) => {
@@ -32,24 +35,24 @@ const YourComponent = ({ onBack, onNext }) => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
   { activeStep === 2 && <Step2 /> }
-
-
+  const { generatedId,customerId,orderDate} = useContext(IdContext);
   const saveOrderHistory = () => {
     const orderHistoryData = {
       TenantID: 1,
-      OrderHistoryID: 4,
-      OrderID: 3,
-      StatusId: 1,
-      StartDate: "2024-09-19",
+      OrderHistoryID:0,
+      OrderID: generatedId,
+      StatusID: 1,
+      StartDate: orderDate,
       EndDate: orderDetails.DeliveryDate,
-      AssignTo: 2,
+      AssignTo: "2",
       Comments: "Not Important",
       UserID: 2,
       OrderStatus: orderDetails.OrderStatus,
       CreatedBy: "sandy",
     };
-
     fetch(CREATEORUPDATE_ORDER_HISTORY__API, {
       method: 'POST',
       headers: {
@@ -60,27 +63,60 @@ const YourComponent = ({ onBack, onNext }) => {
       .then(response => response.json())
       .then(data => {
         if (data.success || data.message === 'Status created successfully') {
-          setPopupMessage('Status created successfully');
+          setPopupMessage('✔️' +'Status created successfully');
+          setShowModal(true);
+          closeModalAndMoveToNextStep(); // Close modal and move to next step
         } else {
-          setPopupMessage('✔️' + (data.message || 'Unknown error'));
+          setPopupMessage((data.message || 'Unknown error'));
+          setShowModal(true);
+          closeModalAfterDelay(); // Close modal after a delay for errors
         }
-        setShowModal(true);
-        closeModalAndMoveToNextStep(); // Close modal and move to next step
       })
       .catch((error) => {
         setPopupMessage('❌' + error.message);
         setShowModal(true);
-        closeModalAndMoveToNextStep(); // Close modal and move to next step
+        closeModalAfterDelay(); // Close modal after a delay for errors
       });
   }
-
+  
   const closeModalAndMoveToNextStep = () => {
     setTimeout(() => {
       setShowModal(false);
-      onNext();
+      onNext(); // Move to next step after 4 seconds
     }, 4000); // Close after 4 seconds
   };
+  
+  const closeModalAfterDelay = () => {
+    setTimeout(() => {
+      setShowModal(false); // Close modal after a delay
+    }, 4000); // Close after 4 seconds
+  };
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        const response = await fetch(`${GETORDERBYID_API}/${generatedId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const data = await response.json();
+        setOrderDetails(data); // Set data to state
+        console.log(setOrderDetails)
+      } catch (err) {
+        setError(err.message); // Handle error
+      } finally {
+        setLoading(false); // Stop loading spinner
+      }
+    };
+
+    fetchOrderDetails(); // Trigger API call when the component mounts
+  }, []); // Empty dependency array means this effect runs once on component mount
   const handleChange = (e) => {
     const { name, value } = e.target;
     setOrderDetails((prev) => ({ ...prev, [name]: value }));
@@ -381,7 +417,7 @@ const YourComponent = ({ onBack, onNext }) => {
                       onClick={handleCancel}
                       className="button-base cancel-btn"
                     >
-                      Cancel
+                    Cancel
                     </button>
 
                   </div>
@@ -462,11 +498,6 @@ const YourComponent = ({ onBack, onNext }) => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-
-
-
-
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useContext} from 'react';
 import { Box, Button, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, Paper } from '@mui/material';
 import { IoMdAddCircleOutline } from 'react-icons/io';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
@@ -6,10 +6,12 @@ import StatusBadge from './Statuses';
 // Import StatusBadge component if it's a separate file
 import { useNavigate } from 'react-router-dom';
 import {CREATEORUPDATE_PAYMENT_API} from "../../Constants/apiRoutes";
+import { IdContext } from '../../Context/IdContex';
 
 
 
 const Payment = () => {
+  const { generatedId,customerId,orderDate} = useContext(IdContext);
   const [orderDetails, setOrderDetails] = useState({
     PaymentMethod: '',
     PaymentStatus: '',
@@ -29,11 +31,11 @@ const Payment = () => {
   const savePayment = () => {
     const paymentData = {
       TenantID: 1,
-      PaymentID: 2,
-      OrderID: 4,
-      CustomerID: 1,
+      PaymentID:0,
+      OrderID: generatedId,
+      CustomerID: 33,
       TotalAmount: orderDetails.AdvanceAmount,
-      AdvanceAmount: "500",
+      AdvanceAmount: 500,
       BalenceAmount: 500,
       PaymentComments: orderDetails.PaymentComments,
       PaymentMethod: orderDetails.PaymentMethod,

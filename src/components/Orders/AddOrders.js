@@ -21,14 +21,14 @@ import { IoIosSearch, IoMdAddCircleOutline } from "react-icons/io";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { RxCross1 } from "react-icons/rx";
-import LoadingAnimation from '../../components/Loading/LoadingAnimation';
 
 import { Combobox } from "@headlessui/react";
 import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/20/solid";
 import axios from "axios";
 import { OrderContext } from "../../Context/orderContext";
- import Step3 from './payment';
- import Step2 from './orderStatus';
+import { IdContext } from "../../Context/IdContex";
+import Step3 from './payment';
+import Step2 from './orderStatus';
 const categories = [
   { id: 1, name: "Walk-in", subOptions: ["Newspaper ad"] },
   {
@@ -81,7 +81,7 @@ function AddOrders() {
   const [order, setOrder] = useState(null);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState('success');
-  const [isLoading, setIsLoading] = useState(false);
+  const { generatedId, setGeneratedId,orderDate, setOrderDate} = useContext(IdContext);
   useEffect(() => {
     if (isDialogOpen) {
       setSelectedCountry(selectedCustomer?.CountryID || "");
@@ -97,7 +97,6 @@ function AddOrders() {
   useEffect(() => {
     fetchData(searchValue);
   }, []);
-  const navigate = useNavigate();
 
   const fetchData = async (value) => {
     try {
@@ -187,7 +186,7 @@ function AddOrders() {
         PaymentMethod: prevDetails.PaymentMethod || selectedCustomer.PaymentMethod || "",
         PaymentStatus: prevDetails.PaymentStatus || selectedCustomer.PaymentStatus || "",
         MaskedCardNumber: prevDetails.MaskedCardNumber || selectedCustomer.MaskedCardNumber || "",
-        ExpectedCompleteDate: prevDetails.ExpectedCompleteDate || selectedCustomer.ExpectedCompleteDate || "",
+        DeliveryDate: prevDetails.DeliveryDate || selectedCustomer.DeliveryDate || "",
         Comments: prevDetails.Comments || selectedCustomer.Comments || "",
         ReferedBy: prevDetails.ReferedBy || selectedCustomer.ReferedBy || "walk-in",
         PaymentComments: prevDetails.PaymentComments || selectedCustomer.PaymentComments || "",
@@ -198,6 +197,7 @@ function AddOrders() {
         DesginerName: prevDetails.DesginerName || selectedCustomer.DesignerName || "",
         UploadImages: prevDetails.UploadImages || selectedCustomer.UploadImages || "",
         choosefiles: prevDetails.choosefiles || selectedCustomer.ChooseFiles || "",
+        StoreID: selectedCustomer.StoreID || prevDetails.StoreID || '',
       }));
 
       // Explicitly update the phone number field if it's not updated
@@ -295,7 +295,6 @@ function AddOrders() {
     setIsDialogOpen(false);
   }
 
-
   const handleSearchInput = (e) => {
     const { value } = e.target;
     setSearchValue(value);
@@ -350,30 +349,22 @@ function AddOrders() {
   const currentDate = new Date().toISOString().split("T")[0];
 
   const [orderDetails, setOrderDetails] = useState({
-      TenantID: 1,
-      CustomerID:selectedCustomer.CustomerID,
-      OrderDate: currentDate,
-      TotalQuantity: 0,
-      Address: {
+    TenantID: 1,
+    CustomerID: selectedCustomer.CustomerID,
+    OrderDate: currentDate,
+    TotalQuantity: 0,
+    Address: {
       AddressLine1: "",
       AddressLine2: "",
       CityID: "",
       StateID: "",
       CountryID: "",
       ZipCode: "",
-      TenantID: 123
     },
     AddressID: selectedAddress.AddressID,
-
-    // AddressLine1: "",
-    // AddressLine2: "",
-    // CityID: "",
-    // StateID: "",
-    // CountryID: "",
-    // ZipCode: "",
     TotalAmount: "",
     OrderStatus: "Pending",
-    TotalQuantity: "5",
+    TotalQuantity: 0,
     OrderBy: "",
     Type: "",
     DeliveryDate: "",
@@ -384,7 +375,7 @@ function AddOrders() {
     PaymentMethod: "",
     PaymentStatus: "",
     MaskedCardNumber: "",
-    ExpectedCompleteDate: "",
+    DeliveryDate: "",
     Comments: "",
     ReferedBy: "walk-in",
     PaymentComments: "",
@@ -395,7 +386,7 @@ function AddOrders() {
     DesginerName: "",
     UploadImages: "",
     choosefiles: "",
-    StoreID:selectedCustomer.StoreID,
+    StoreID: selectedCustomer.StoreID,
 
   });
   useEffect(() => {
@@ -499,7 +490,7 @@ function AddOrders() {
           // Only update DeliveryDate if the value is a valid non-negative number
           const today = new Date();
           const deliveryDate = addDays(today, days + 1); // Add 1 extra day for a 5-day gap
-          updatedDetails.ExpectedCompleteDate = deliveryDate;
+          updatedDetails.DeliveryDate = deliveryDate;
 
           // Clear any previous error
           setErrors((prevErrors) => ({
@@ -508,7 +499,7 @@ function AddOrders() {
           }));
         } else if (value === '') {
           // Clear DeliveryDate if ExpectedDurationDays is cleared
-          updatedDetails.ExpectedCompleteDate = '';
+          updatedDetails.DeliveryDate = '';
         } else {
           // Set an error message if the value is not a valid number
           setErrors((prevErrors) => ({
@@ -548,15 +539,13 @@ function AddOrders() {
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
     setImages(newImages);
     setImagePreviews(newPreviews);
-  };
-
+  }
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const existingCustomer = results.find(
-      (customer) => customer.Email === orderDetails.customerEmail
-    );
 
-    // If the customer is not found in the fetched results, set CustomerID to 0
+    // Check if the order already exists (for update) or if it's a new order (for creation)
+    const isUpdate = orderDetails.OrderID ? true : false; // Check if OrderID exists for an update
+
     setOrderDetails((prevDetails) => ({
       ...prevDetails,
       CustomerID: selectedCustomer?.CustomerID || "", // Pass CustomerID
@@ -570,175 +559,72 @@ function AddOrders() {
       StateID: selectedCustomer?.StateID || "", // Pass StateID
       CountryID: selectedCustomer?.CountryID || "", // Pass CountryID
       ZipCode: selectedCustomer?.ZipCode || "", // Pass ZipCode
+      StoreID: selectedCustomer?.StoreID || ""
     }));
-    const data = new FormData();
 
-    // Append all form data to the FormData object
-    for (let key in orderDetails) {
-      if (key !== "UploadImages" && key !== "choosefiles") {
-        data.append(key, orderDetails[key]);
-      }
-    }
-    images.forEach((image) => {
-      data.append("UploadImages", image.file); // Appending multiple images with the same key
-    });
-
-    // Append PDF file
-    if (pdfFile) {
-      data.append("choosefiles", pdfFile);
-    }
+    // Prepare raw JSON data for API
+    const data = {
+      ...orderDetails,
+      UploadImages: imagePreviews, // Handle image previews
+      category: selectedCategory?.name || "",
+      subOption: selectedSubOption || "",
+      pdfFile: pdfFile ? pdfFile.name : "", // Store PDF file name
+    };
 
     try {
+      // Send POST request to the API
       const response = await axios.post(
-        // "https://imlystudios-backend-mqg4.onrender.com/api/orders/createOrder",
-        CREATE_ORDERS,
+        'https://imly-b2y.onrender.com/api/orders/createOrderOrUpdate',
+        data,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            "Content-Type": "application/json", // Set content type as JSON
           },
         }
       );
-      toast.success("Order created successfully!", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-      console.log("Order created successfully:", response.data);
+
+      const generatedId = response.data.OrderID;
+      const orderDate=orderDetails.OrderDate;// Assuming response contains OrderID
+      setGeneratedId(generatedId);
+      setOrderDate(orderDate);
+      console.log(isUpdate ? "Order updated successfully:" : "Order created successfully:",orderDetails.OrderDate);
+
+      // Show different messages for creation and update
+      if (isUpdate) {
+        toast.success("Order updated successfully!", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      } else {
+        toast.success("Order created successfully!", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      }
+
+      // Handle next step after order creation or update
+      if (generatedId) {
+        setTimeout(() => {
+          console.log("Timeout executed after order creation or update");
+          handleNext();
+        }, 5000); // 3 seconds delay
+      }
     } catch (error) {
-      console.log("Order created successfully:", data);
-    }
-    const newErrors = {};
-    if (!orderDetails.OrderDate) {
-      newErrors.OrderDate = "Order Date is required";
-      console.log("Order Date is required");
-    }
-    if (!orderDetails.TotalQuantity) {
-      newErrors.TotalQuantity = "Total Quantity is required";
-      console.log("Total Quantity is required");
-    }
-    if (!orderDetails.AddressLine1) {
-      newErrors.AddressLine1 = "Address Line 1 is required";
-      console.log("Address Line 1 is required");
-    }
-    if (!orderDetails.AddressLine2) {
-      newErrors.AddressLine2 = "Address Line 2 is required";
-      console.log("Address Line 2 is required");
-    }
-    if (!orderDetails.CityID) {
-      newErrors.CityID = "City ID is required";
-      console.log("City ID is required");
-    }
-    if (!orderDetails.StateID) {
-      newErrors.StateID = "State ID is required";
-      console.log("State ID is required");
-    }
-    if (!orderDetails.CountryID) {
-      newErrors.CountryID = "Country ID is required";
-      console.log("Country ID is required");
-    }
-    if (!orderDetails.ZipCode) {
-      newErrors.ZipCode = "Zip Code is required";
-      console.log("Zip Code is required");
-    }
-    if (!orderDetails.TotalAmount) {
-      newErrors.TotalAmount = "Total Amount is required";
-      console.log("Total Amount is required");
-    }
-    if (!orderDetails.OrderStatus) {
-      newErrors.OrderStatus = "Order Status is required";
-      console.log("Order Status is required");
-    }
-    if (!orderDetails.OrderBy) {
-      newErrors.OrderBy = "Order By is required";
-      console.log("Order By is required");
-    }
-    if (!orderDetails.Type) {
-      newErrors.Type = "Type is required";
-      console.log("Type is required");
-    }
-    if (!orderDetails.DeliveryDate) {
-      newErrors.DeliveryDate = "Delivery Date is required";
-      console.log("Delivery Date is required");
-    }
-    if (!orderDetails.customerFirstName) {
-      newErrors.customerFirstName = "Customer First Name is required";
-      console.log("Customer First Name is required");
-    }
-    if (!orderDetails.customerLastName) {
-      newErrors.customerLastName = "Customer Last Name is required";
-      console.log("Customer Last Name is required");
-    }
-    if (!orderDetails.customerEmail) {
-      newErrors.customerEmail = "Customer Email is required";
-      console.log("Customer Email is required");
-    }
-    if (!orderDetails.customerPhone) {
-      newErrors.customerPhone = "Customer Phone is required";
-      console.log("Customer Phone is required");
-    }
-    if (!orderDetails.PaymentMethod) {
-      newErrors.PaymentMethod = "Payment Method is required";
-      console.log("Payment Method is required");
-    }
-    if (!orderDetails.PaymentStatus) {
-      newErrors.PaymentStatus = "Payment Status is required";
-      console.log("Payment Status is required");
-    }
-    if (!orderDetails.MaskedCardNumber) {
-      newErrors.MaskedCardNumber = "Masked Card Number is required";
-      console.log("Masked Card Number is required");
-    }
-    if (!orderDetails.ExpectedCompleteDate) {
-      newErrors.ExpectedCompleteDate = "Expected Complete Date is required";
-      console.log("Expected Complete Date is required");
-    }
-    if (!orderDetails.Comments) {
-      newErrors.Comments = "Comments are required";
-      console.log("Comments are required");
-    }
-    if (!orderDetails.ReferedBy) {
-      newErrors.ReferedBy = "Referred By is required";
-      console.log("Referred By is required");
-    }
-    if (!orderDetails.PaymentComments) {
-      newErrors.PaymentComments = "Payment Comments are required";
-      console.log("Payment Comments are required");
-    }
-    if (!orderDetails.assginto) {
-      newErrors.assginto = "Assigned To is required";
-      console.log("Assigned To is required");
-    }
-    if (!orderDetails.AdvanceAmount) {
-      newErrors.AdvanceAmount = "Advance Amount is required";
-      console.log("Advance Amount is required");
-    }
-    if (!orderDetails.BalenceAmount) {
-      newErrors.BalenceAmount = "Balance Amount is required";
-      console.log("Balance Amount is required");
-    }
-    if (!orderDetails.ExpectedDurationDays) {
-      newErrors.ExpectedDurationDays = "Expected Duration Days is required";
-      console.log("Expected Duration Days is required");
-    }
-    if (!orderDetails.DesginerName) {
-      newErrors.DesginerName = "Designer Name is required";
-      console.log("Designer Name is required");
-    }
-    if (images.length === 0) {
-      newErrors.UploadImages = "Upload Images are required";
-      console.log("Upload Images are required");
-    }
-    if (!pdfFile) {
-      newErrors.choosefiles = "Choose Files is required";
-      console.log("Choose Files is required");
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      toast.error("Please fill in all required fields.", {
+      // Error handling
+      console.error(isUpdate ? "Error updating order:" : "Error creating order:", error);
+
+      // Show error toast
+      toast.error(isUpdate ? "Order update failed!" : "Order creation failed!", {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
@@ -747,37 +633,23 @@ function AddOrders() {
         draggable: true,
         progress: undefined,
       });
-      return;
-     }
+    }
 
-    setSubmittedDetails({
-      ...orderDetails,
-      images: imagePreviews,
-      category: selectedCategory?.name || "",
-      subOption: selectedSubOption || "",
-    }); // Store the submitted details including image previews
-    setShowAlert(true);
-  
-
+    // Reset form fields after submission
     setOrderDetails({
       TenantID: 1,
-      CustomerID: selectedCustomer.CustomerID,
+      CustomerID: selectedCustomer?.CustomerID || "",
       OrderDate: currentDate,
       TotalQuantity: 0,
-      AddressID: selectedAddress.AddressID,
-      
-      // AddressLine1: "",
-      // AddressLine2: "",
-      // CityID: "",
-      // StateID: "",
-      // CountryID: "",
-      // ZipCode: "",
+      AddressID: selectedAddress?.AddressID || "",
+      AddressLine1: "",
+      AddressLine2: "",
+      CityID: "",
+      StateID: "",
+      CountryID: "",
+      ZipCode: "",
       TotalAmount: "",
-      TotalQuantity: "",
       OrderStatus: "Pending",
-      OrderBy: "",
-      Type: "",
-      DeliveryDate: "",
       customerFirstName: "",
       customerLastName: "",
       customerEmail: "",
@@ -785,9 +657,9 @@ function AddOrders() {
       PaymentMethod: "",
       PaymentStatus: "",
       MaskedCardNumber: "",
-      ExpectedCompleteDate: "",
+      DeliveryDate: "",
       Comments: "",
-      ReferedBy: "walk-in",
+      ReferedBy:"",
       PaymentComments: "",
       assginto: "",
       AdvanceAmount: "",
@@ -796,25 +668,25 @@ function AddOrders() {
       DesginerName: "",
       UploadImages: "",
       choosefiles: "",
-      StoreID:selectedCustomer.StateID,
-    });console.log('vijaykumar',selectedCustomer.CustomerID)
-        console.log('venky',selectedCustomer.AddressID)
+      StoreID: selectedCustomer?.StateID || "",
+    });
+
+    // Reset images and form state
     setImages([]);
     setImagePreviews([]);
     setSelectedSubOption("");
+    setActiveStep(0);
+    setShowAlert(true);
+  };
 
-    setActiveStep(0); // Reset stepper to first step
-    setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
-  }
 
   const handleCancel = () => {
     setOrderDetails({
       TenantID: 1,
-      CustomerID:selectedCustomer.CustomerID,
+      CustomerID: selectedCustomer.CustomerID,
       OrderDate: currentDate,
       TotalQuantity: 0,
       AddressID: selectedAddress.AddressID,
-      TotalQuantity:"5",
       // Address: {
       //   AddressLine1: "",
       //   AddressLine2: "",
@@ -830,7 +702,7 @@ function AddOrders() {
       // StateID: "",
       // CountryID: "",
       // ZipCode: "",
-      StoreID:selectedCustomer.StoreID,
+      StoreID: selectedCustomer.StoreID,
       TotalAmount: "",
       OrderStatus: "",
       OrderBy: "",
@@ -843,7 +715,7 @@ function AddOrders() {
       PaymentMethod: "",
       PaymentStatus: "",
       MaskedCardNumber: "",
-      ExpectedCompleteDate: "",
+      DeliveryDate: "",
       Comments: "",
       ReferedBy: "walk-in",
       PaymentComments: "",
@@ -868,7 +740,6 @@ function AddOrders() {
   const [stateMap, setStateMap] = useState({});
   const [cityMap, setCityMap] = useState({});
   const [addresses, setAddresses] = useState([]);
-
   const amountToBePaid = orderDetails.TotalAmount - orderDetails.AdvanceAmount;
   const remainder = amountToBePaid / orderDetails.installments;
   const [showSearchCard, setShowSearchCard] = useState(false);
@@ -890,7 +761,7 @@ function AddOrders() {
     const { value } = e.target;
     setOrderDetails((prevDetails) => ({
       ...prevDetails,
-      ExpectedCompleteDate: value, // Manually update the DeliveryDate
+      DeliveryDate: value, // Manually update the DeliveryDate
     }));
   };
   const handleAddOrder = () => {
@@ -1019,7 +890,8 @@ function AddOrders() {
         customerPhone: customerDetails.customerPhone,
       }));
     }
-  }, [customerDetails]);
+  }, [customerDetails],
+    console.log(customerDetails));
 
   const handleSearch = async () => {
     try {
@@ -1045,166 +917,167 @@ function AddOrders() {
       setError("Error fetching customer data.");
     }
   };
- 
-const [stateQuery, setStateQuery] = useState(""); // Define state for the query input
+
+  const [stateQuery, setStateQuery] = useState(""); // Define state for the query input
 
 
-useEffect(() => {
-  const fetchLocationData = async (CountryID, StateID, CityID) => {
-    try {
-      // Fetch Country by CountryID
-      if (CountryID && countries.length > 0) {
-        const country = countries.find(c => c.CountryID === CountryID);
-        console.log("Country Found:", country);
-        if (country) {
-          setOrderDetails(prevDetails => ({
-            ...prevDetails,
-            CountryName: country.CountryName,
-          }));
-        } else {
-          console.error("Country not found.");
-        }
-      }
-
-      // Fetch State by StateID
-      if (CountryID && StateID) {
-        const stateResponse = await axios.get(`${STATES_API}/${CountryID}`);
-        console.log("State Response:", stateResponse.data);
-        if (stateResponse.data.status === "SUCCESS") {
-          const stateData = stateResponse.data.data;
-          const state = stateData.find(s => s.StateID === StateID);
-          console.log("State Found:", state);
-          if (state) {
+  useEffect(() => {
+    const fetchLocationData = async (CountryID, StateID, CityID) => {
+      try {
+        // Fetch Country by CountryID
+        if (CountryID && countries.length > 0) {
+          const country = countries.find(c => c.CountryID === CountryID);
+          console.log("Country Found:", country);
+          if (country) {
             setOrderDetails(prevDetails => ({
               ...prevDetails,
-              StateName: state.StateName,
+              CountryName: country.CountryName,
             }));
           } else {
-            console.error("State not found.");
+            console.error("Country not found.");
           }
         }
-      }
 
-      // Fetch City by StateID and CityID
-      if (StateID && CityID) {
-        const cityResponse = await axios.get(`${CITIES_API}/${StateID}`);
-        console.log("City Response:", cityResponse.data);
-        if (cityResponse.data.status === "SUCCESS") {
-          const cityData = cityResponse.data.data;
-          const city = cityData.find(c => c.CityID === CityID);
-          console.log("City Found:", city);
-          if (city) {
-            setOrderDetails(prevDetails => ({
-              ...prevDetails,
-              CityName: city.CityName,
-            }));
-          } else {
-            console.error("City not found.");
+        // Fetch State by StateID
+        if (CountryID && StateID) {
+          const stateResponse = await axios.get(`${STATES_API}/${CountryID}`);
+          console.log("State Response:", stateResponse.data);
+          if (stateResponse.data.status === "SUCCESS") {
+            const stateData = stateResponse.data.data;
+            const state = stateData.find(s => s.StateID === StateID);
+            console.log("State Found:", state);
+            if (state) {
+              setOrderDetails(prevDetails => ({
+                ...prevDetails,
+                StateName: state.StateName,
+              }));
+            } else {
+              console.error("State not found.");
+            }
           }
         }
+
+        // Fetch City by StateID and CityID
+        if (StateID && CityID) {
+          const cityResponse = await axios.get(`${CITIES_API}/${StateID}`);
+          console.log("City Response:", cityResponse.data);
+          if (cityResponse.data.status === "SUCCESS") {
+            const cityData = cityResponse.data.data;
+            const city = cityData.find(c => c.CityID === CityID);
+            console.log("City Found:", city);
+            if (city) {
+              setOrderDetails(prevDetails => ({
+                ...prevDetails,
+                CityName: city.CityName,
+              }));
+            } else {
+              console.error("City not found.");
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching location data:", error);
       }
-    } catch (error) {
-      console.error("Error fetching location data:", error);
-    }
-  };
+    };
 
-  if (isEditMode) {
-    const order = orderIdDetails?.order || {};
-    const customer = order.Customer || {};
-    const addresses = customer.Address || [];
-  
-    // Default to the primary address (first address in the array)
-    const primaryAddress = addresses[0] || {};
+    if (isEditMode) {
+      const order = orderIdDetails?.order || {};
+      const customer = order.Customer || {};
+      const addresses = customer.Address || [];
 
-    // Log primaryAddress for debugging
-    console.log("Primary Address:", primaryAddress);
+      // Default to the primary address (first address in the array)
+      const primaryAddress = addresses[0] || {};
 
-    // Set basic order details along with the primary address
-    setOrderDetails(prevDetails => ({
-      ...prevDetails,
-      OrderID: order.OrderID || "",
-      OrderNumber: order.OrderNumber || "",
-      CustomerID: order.CustomerID || "",
-      OrderDate: order.OrderDate || "",
-      TotalQuantity: order.TotalQuantity || "",
-      TotalAmount: order.TotalAmount || "",
-      OrderStatus: order.OrderStatus || "",
-      DeliveryDate: order.DeliveryDate || "",
-      Type: order.Type || "",
-      Comments: order.Comments || "",
-      DesignerName: order.DesginerName || "",
-      ReferedBy: order.ReferedBy || "",
-      assginto: order.assginto || "",
-      UploadImages: order.UploadImages || [],
-      choosefiles: order.choosefiles || [],
-      startDate: order.startDate || "",
-      CreatedBy: order.CreatedBy || "",
-      ExpectedDurationDays: order.ExpectedDurationDays || "",
-      customerFirstName: customer.FirstName || "",
-      customerLastName: customer.LastName || "",
-      customerEmail: customer.Email || "",
-      customerPhone: customer.PhoneNumber || "",
-      AddressID: primaryAddress.AddressID || "",
-      TenantID: primaryAddress.TenantID || "",
-      AddressLine1: primaryAddress.AddressLine1 || "",
-      AddressLine2: primaryAddress.AddressLine2 || "",
-      CityID: primaryAddress.CityID || "",
-      StateID: primaryAddress.StateID || "",
-      CountryID: primaryAddress.CountryID || "",
-      ZipCode: primaryAddress.ZipCode || "",
-      CreatedAt: primaryAddress.CreatedAt || "",
-      UpdatedAt: primaryAddress.UpdatedAt || "",
-    }));
+      // Log primaryAddress for debugging
+      console.log("Primary Address:", order.d);
 
-    // Fetch location data only if countries are available
-    if (countries.length > 0) {
-      const { CountryID, StateID, CityID } = primaryAddress;
-      fetchLocationData(CountryID, StateID, CityID);
-    }
-    
-    // Ensure country, state, city, gender, and role options exist before finding values
-    if (countries && primaryAddress?.CountryID) {
-      const selectedCountry = countries.find(
-        (country) => country.CountryID === primaryAddress.CountryID
-      );
-      setSelectedCountry(selectedCountry || {});
-    }
+      // Set basic order details along with the primary address
+      setOrderDetails(prevDetails => ({
+        ...prevDetails,
+        OrderID: order.OrderID || "",
+        OrderNumber: order.OrderNumber || "",
+        CustomerID: order.CustomerID || "",
+        OrderDate: order.OrderDate || "",
+        TotalQuantity: order.TotalQuantity || "",
+        TotalAmount: order.TotalAmount || "",
+        OrderStatus: order.OrderStatus || "",
+        DeliveryDate: order.DeliveryDate || "",
+        Type: order.Type || "",
+        Comments: order.Comments || "",
+        DesignerName: order.DesginerName || "",
+        ReferedBy: order.ReferedBy || "",
+        assginto: order.assginto || "",
+        UploadImages: order.UploadImages || [],
+        choosefiles: order.choosefiles || [],
+        startDate: order.startDate || "",
+        CreatedBy: order.CreatedBy || "",
+        ExpectedDurationDays: order.ExpectedDurationDays || "",
+        customerFirstName: customer.FirstName || "",
+        customerLastName: customer.LastName || "",
+        customerEmail: customer.Email || "",
+        customerPhone: customer.PhoneNumber || "",
+        AddressID: primaryAddress.AddressID || "",
+        TenantID: primaryAddress.TenantID || "",
+        AddressLine1: primaryAddress.AddressLine1 || "",
+        AddressLine2: primaryAddress.AddressLine2 || "",
+        CityID: primaryAddress.CityID || "",
+        StateID: primaryAddress.StateID || "",
+        CountryID: primaryAddress.CountryID || "",
+        ZipCode: primaryAddress.ZipCode || "",
+        CreatedAt: primaryAddress.CreatedAt || "",
+        UpdatedAt: primaryAddress.UpdatedAt || "",
+        StoreID: customer.StoreID || "",
+      }));
 
-    if (states && primaryAddress?.StateID) {
-      const selectedState = states.find(
-        (state) => state.StateID === primaryAddress.StateID
-      );
-      setSelectedState(selectedState || {});
-    }
+      // Fetch location data only if countries are available
+      if (countries.length > 0) {
+        const { CountryID, StateID, CityID } = primaryAddress;
+        fetchLocationData(CountryID, StateID, CityID);
+      }
 
-    if (cities && primaryAddress?.CityID) {
-      const selectedCity = cities.find(
-        (city) => city.CityID === primaryAddress.CityID
-      );
-      setSelectedCity(selectedCity || {});
-    }
-
-    // Fetch states if the country is selected and no state data is available
-    if (primaryAddress?.CountryID && !states?.length) {
-      fetchStatesByCountry(primaryAddress.CountryID).then((fetchedStates) => {
-        const state = fetchedStates?.find(
-          (s) => s.StateID === primaryAddress.StateID
+      // Ensure country, state, city, gender, and role options exist before finding values
+      if (countries && primaryAddress?.CountryID) {
+        const selectedCountry = countries.find(
+          (country) => country.CountryID === primaryAddress.CountryID
         );
-        setSelectedState(state || {});
-      });
-    }
+        setSelectedCountry(selectedCountry || {});
+      }
 
-    // Fetch cities if the state is selected and no city data is available
-    if (primaryAddress?.StateID && !cities?.length) {
-      fetchCitiesByState(primaryAddress.StateID).then((fetchedCities) => {
-        const city = fetchedCities?.find(
-          (c) => c.CityID === primaryAddress.CityID
+      if (states && primaryAddress?.StateID) {
+        const selectedState = states.find(
+          (state) => state.StateID === primaryAddress.StateID
         );
-        setSelectedCity(city || {});
-      });
+        setSelectedState(selectedState || {});
+      }
+
+      if (cities && primaryAddress?.CityID) {
+        const selectedCity = cities.find(
+          (city) => city.CityID === primaryAddress.CityID
+        );
+        setSelectedCity(selectedCity || {});
+      }
+
+      // Fetch states if the country is selected and no state data is available
+      if (primaryAddress?.CountryID && !states?.length) {
+        fetchStatesByCountry(primaryAddress.CountryID).then((fetchedStates) => {
+          const state = fetchedStates?.find(
+            (s) => s.StateID === primaryAddress.StateID
+          );
+          setSelectedState(state || {});
+        });
+      }
+
+      // Fetch cities if the state is selected and no city data is available
+      if (primaryAddress?.StateID && !cities?.length) {
+        fetchCitiesByState(primaryAddress.StateID).then((fetchedCities) => {
+          const city = fetchedCities?.find(
+            (c) => c.CityID === primaryAddress.CityID
+          );
+          setSelectedCity(city || {});
+        });
+      }
     }
-  }
-}, [isEditMode, orderIdDetails, countries, STATES_API, CITIES_API]);
+  }, [isEditMode, orderIdDetails, countries, STATES_API, CITIES_API]);
 
 
 
@@ -1326,12 +1199,6 @@ useEffect(() => {
       CityName: city.CityName
     });
   };
-  const handleCancel2 = () => {
-    // Example: Reset form or navigate to a different page
-    console.log('Cancel clicked');
-    // If you want to navigate away from the form, for example:
-    navigate('/Orders');  // This assumes you're using `react-router-dom` for navigation
-  };
 
 
   return (
@@ -1386,8 +1253,9 @@ useEffect(() => {
             </React.Fragment>
           ) : (
             <React.Fragment>
-                {activeStep === 2 && <Step3 onBack={handleBack} />} 
-               {activeStep === 1 && <Step2 onBack={handleBack} onNext={handleNext}/>} 
+              {activeStep === 2 && <Step3 onBack={handleBack} />}
+              {activeStep === 1 && <Step2 onBack={handleBack} onNext={handleNext} />}
+
               <Box
                 sx={{
                   display: "grid",
@@ -1402,69 +1270,75 @@ useEffect(() => {
                   <>
                     <div className="grid ">
                       <div className="flex justify-left items-center h-full">
-                        <div className="relative flex flex-col w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg pb-2 mx-auto">
-                          <input
-                            id="searchName"
-                            type="text"
-                            placeholder="Search by Name..."
-                            value={searchValue}
-                            onChange={handleSearchInput}
-                            onFocus={() => setIsFocused(true)}
-                            onBlur={() => {
-                              if (!isHovered) {
-                                setIsFocused(false); // Close dropdown if not hovered
-                              }
-                            }}
-                            className="mt-1 p-2 pr-10 border border-gray-300 rounded-md text-sm md:text-base"
-                          />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <IoIosSearch aria-label="Search Icon" />
-                          </div>
+                        
+                      <div className="relative flex flex-col w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg pb-2 mx-auto">
+  {/* Render search input only if isEditMode is false */}
+  {!isEditMode && (
+    <>
+      <input
+        id="searchName"
+        type="text"
+        placeholder="Search by Name..."
+        value={searchValue}
+        onChange={handleSearchInput}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          if (!isHovered) {
+            setIsFocused(false); // Close dropdown if not hovered
+          }
+        }}
+        className="mt-1 p-2 pr-10 border border-gray-300 rounded-md text-sm md:text-base"
+      />
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <IoIosSearch aria-label="Search Icon" />
+      </div>
 
-                          {/* Only show the dropdown when searchValue is not empty and input is focused */}
-                          <div
-                            className={`absolute top-full mt-1 border-solid border-2 rounded-lg p-2 w-full bg-white z-10 ${searchValue && isFocused ? "block" : "hidden"}`}
-                            style={{
-                              maxHeight: '200px',
-                              minHeight: '100px',
-                              overflowY: 'auto',
-                            }}
-                            onMouseEnter={handleMouseEnter}
-                            onMouseLeave={handleMouseLeave}
-                          >
-                            {results.length > 0 ? (
-                              <>
-                                <div className="mb-2 text-sm text-gray-600">
-                                  {results.length} Result{results.length > 1 ? "s" : ""}
-                                </div>
+      {/* Only show the dropdown when searchValue is not empty and input is focused */}
+      <div
+        className={`absolute top-full mt-1 border-solid border-2 rounded-lg p-2 w-full bg-white z-10 ${searchValue && isFocused ? "block" : "hidden"}`}
+        style={{
+          maxHeight: '200px',
+          minHeight: '100px',
+          overflowY: 'auto',
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {results.length > 0 ? (
+          <>
+            <div className="mb-2 text-sm text-gray-600">
+              {results.length} Result{results.length > 1 ? "s" : ""}
+            </div>
 
-                                {/* Map over filtered results */}
-                                {[...new Map(results.map((result) => [result.CustomerID, result])).values()].map((result) => (
-                                  <div
-                                    className="relative cursor-pointer flex flex-col p-2 hover:bg-gray-100 group"
-                                    key={result.CustomerID}
-                                    onClick={() => handleCustomerSelect(result)}
-                                  >
-                                    <span className="font-medium">
-                                      {result.FirstName} {result.LastName}
-                                    </span>
-                                    <div className="flex items-center text-xs md:text-sm text-gray-500">
-                                      <IoIosCall className="w-4 h-4 mr-1" aria-label="Phone Icon" />
-                                      <span>{result.PhoneNumber}</span>
-                                    </div>
-                                    <div className="flex items-center text-xs md:text-sm text-gray-500">
-                                      <IoMdMail className="w-4 h-4 mr-1" aria-label="Email Icon" />
-                                      <span>{result.Email}{result.AddressID}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </>
-                            ) : (
-                              // Show this message if no results are found
-                              <div className="text-sm text-gray-500">No results found</div>
-                            )}
-                          </div>
-                        </div>
+            {/* Map over filtered results */}
+            {[...new Map(results.map((result) => [result.CustomerID, result])).values()].map((result) => (
+              <div
+                className="relative cursor-pointer flex flex-col p-2 hover:bg-gray-100 group"
+                key={result.CustomerID}
+                onClick={() => handleCustomerSelect(result)}
+              >
+                <span className="font-medium">
+                  {result.FirstName} {result.LastName}
+                </span>
+                <div className="flex items-center text-xs md:text-sm text-gray-500">
+                  <IoIosCall className="w-4 h-4 mr-1" aria-label="Phone Icon" />
+                  <span>{result.PhoneNumber}</span>
+                </div>
+                <div className="flex items-center text-xs md:text-sm text-gray-500">
+                  <IoMdMail className="w-4 h-4 mr-1" aria-label="Email Icon" />
+                  <span>{result.Email}{result.AddressID}</span>
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="p-2 text-gray-500">No results found.</div>
+        )}
+      </div>
+    </>
+  )}
+</div>
+
 
 
                         {isDialogOpen && selectedCustomer && (
@@ -1661,7 +1535,7 @@ useEffect(() => {
                         <input
                           type="date"
                           name="OrderDate"
-                          value={orderDetails.OrderDate || currentDate}
+                          value={orderDetails.OrderDate ?new Date(orderDetails.OrderDate).toISOString().split('T')[0] : ""}
                           onChange={handleChange}
                           className={`p-1 mt-2 mb-1 w-full border rounded-md ${errors.OrderDate
                             ? "border-red-500"
@@ -1680,17 +1554,18 @@ useEffect(() => {
                         </label>
                         <input
                           type="date"
-                          name="ExpectedCompleteDate"
-                          value={orderDetails.ExpectedCompleteDate}
+                          name="DeliveryDate"
+                          // value={orderDetails.DeliveryDate}
+                          value={orderDetails.DeliveryDate ? new Date(orderDetails.DeliveryDate).toISOString().split('T')[0] : ""}
                           onChange={handleDateChang}
-                          className={` p-1  mt-2 mb-1 w-full border rounded-md ${errors.ExpectedCompleteDate
+                          className={` p-1  mt-2 mb-1 w-full border rounded-md ${errors.DeliveryDate
                             ? "border-red-500"
                             : "border-gray-300"
                             }`}
                         />
-                        {errors.ExpectedCompleteDate && (
+                        {errors.DeliveryDate && (
                           <p className="text-red-500 text-sm mt-1">
-                            {errors.ExpectedCompleteDate}
+                            {errors.DeliveryDate}
                           </p>
                         )}
                       </div>
@@ -1700,19 +1575,19 @@ useEffect(() => {
                         </label>
                         <input
                           type="text"
-                          name="customerLastName"
-                          value=""
+                          name="DesginerName"
+                          value={orderDetails.DesginerName}
                           onChange={handleChange}
-                          className={` p-1 mt-2 mb-1 w-full border rounded-md ${errors.customerLastName
+                          className={` p-1 mt-2 mb-1 w-full border rounded-md ${errors.DesginerName
                             ? "border-red-500"
                             : "border-gray-300"
                             }`}
                         />
-                        {/* {errors.customerLastName && (
+                        {errors.DesginerName && (
                           <p className="text-red-500 text-sm mt-1">
-                            {errors.customerLastName}
+                            {errors.DesginerName}
                           </p>
-                        )} */}
+                        )}
                       </div>
                       <div className="mb-4">
                         <label className="block text-xs font-medium text-gray-700">
@@ -1922,88 +1797,88 @@ useEffect(() => {
                         )}
                       </div>
 
-             
 
-<div className="mt-0">
-  <label className="block text-xs font-medium text-gray-700">Country</label>
-  <div className="relative mt-2">
-    <Combobox as="div" value={selectedCountry} onChange={handleCountryChange}>
-      <div className="relative">
-        <Combobox.Input
-          className={`p-1 w-full border rounded-md ${errors.CountryID ? "border-red-500" : "border-gray-300"}`}
-          onChange={(event) => setQuery(event.target.value)}
-          displayValue={(country) => country?.CountryName || ''}
-        />
-        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
-          <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-        </Combobox.Button>
-        <Combobox.Options className="absolute mt-1 max-h-60 w-full z-20 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-          {countries
-            .filter((country) =>
-              country.CountryName.toLowerCase().includes(query.toLowerCase())
-            )
-            .map((country) => (
-              <Combobox.Option
-                key={country.CountryID}
-                value={country}
-                className="group relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900"
-              >
-                <span className="block truncate font-normal group-data-[selected]:font-semibold">
-                  {country.CountryName}
-                </span>
-                <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-indigo-600 group-data-[selected]:flex group-data-[focus]:text-white">
-                  <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                </span>
-              </Combobox.Option>
-            ))}
-        </Combobox.Options>
-      </div>
-    </Combobox>
-    {errors.CountryID && (
-      <p className="text-red-500 text-sm mt-1">{errors.CountryID}</p>
-    )}
-  </div>
-</div>
-<div className="mt-4">
-  <label className="block text-xs font-medium text-gray-700">State</label>
-  <div className="relative mt-2">
-    <Combobox as="div" value={selectedState} onChange={handleStateChange}>
-      <div className="relative">
-        <Combobox.Input
-          className={`p-1 w-full border rounded-md ${errors.StateID ? "border-red-500" : "border-gray-300"}`}
-          onChange={(event) => setStateQuery(event.target.value)} // Update the query as the user types
-          displayValue={(state) => state?.StateName || ''}
-        />
-        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
-          <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-        </Combobox.Button>
-        <Combobox.Options className="absolute mt-1 max-h-60 w-full z-20 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-          {states
-            .filter((state) =>
-              state.StateName.toLowerCase().includes(stateQuery.toLowerCase()) // Filter states based on the query
-            )
-            .map((state) => (
-              <Combobox.Option
-                key={state.StateID}
-                value={state}
-                className="group relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900"
-              >
-                <span className="block truncate font-normal group-data-[selected]:font-semibold">
-                  {state.StateName}
-                </span>
-                <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-indigo-600 group-data-[selected]:flex group-data-[focus]:text-white">
-                  <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                </span>
-              </Combobox.Option>
-            ))}
-        </Combobox.Options>
-      </div>
-    </Combobox>
-    {errors.StateID && (
-      <p className="text-red-500 text-sm mt-1">{errors.StateID}</p>
-    )}
-  </div>
-</div>                     
+
+                      <div className="mt-0">
+                        <label className="block text-xs font-medium text-gray-700">Country</label>
+                        <div className="relative mt-2">
+                          <Combobox as="div" value={selectedCountry} onChange={handleCountryChange}>
+                            <div className="relative">
+                              <Combobox.Input
+                                className={`p-1 w-full border rounded-md ${errors.CountryID ? "border-red-500" : "border-gray-300"}`}
+                                onChange={(event) => setQuery(event.target.value)}
+                                displayValue={(country) => country?.CountryName || ''}
+                              />
+                              <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
+                                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                              </Combobox.Button>
+                              <Combobox.Options className="absolute mt-1 max-h-60 w-full z-20 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                {countries
+                                  .filter((country) =>
+                                    country.CountryName.toLowerCase().includes(query.toLowerCase())
+                                  )
+                                  .map((country) => (
+                                    <Combobox.Option
+                                      key={country.CountryID}
+                                      value={country}
+                                      className="group relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900"
+                                    >
+                                      <span className="block truncate font-normal group-data-[selected]:font-semibold">
+                                        {country.CountryName}
+                                      </span>
+                                      <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-indigo-600 group-data-[selected]:flex group-data-[focus]:text-white">
+                                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                      </span>
+                                    </Combobox.Option>
+                                  ))}
+                              </Combobox.Options>
+                            </div>
+                          </Combobox>
+                          {errors.CountryID && (
+                            <p className="text-red-500 text-sm mt-1">{errors.CountryID}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <label className="block text-xs font-medium text-gray-700">State</label>
+                        <div className="relative mt-2">
+                          <Combobox as="div" value={selectedState} onChange={handleStateChange}>
+                            <div className="relative">
+                              <Combobox.Input
+                                className={`p-1 w-full border rounded-md ${errors.StateID ? "border-red-500" : "border-gray-300"}`}
+                                onChange={(event) => setStateQuery(event.target.value)} // Update the query as the user types
+                                displayValue={(state) => state?.StateName || ''}
+                              />
+                              <Combobox.Button className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
+                                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                              </Combobox.Button>
+                              <Combobox.Options className="absolute mt-1 max-h-60 w-full z-20 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                {states
+                                  .filter((state) =>
+                                    state.StateName.toLowerCase().includes(stateQuery.toLowerCase()) // Filter states based on the query
+                                  )
+                                  .map((state) => (
+                                    <Combobox.Option
+                                      key={state.StateID}
+                                      value={state}
+                                      className="group relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900"
+                                    >
+                                      <span className="block truncate font-normal group-data-[selected]:font-semibold">
+                                        {state.StateName}
+                                      </span>
+                                      <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-indigo-600 group-data-[selected]:flex group-data-[focus]:text-white">
+                                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                      </span>
+                                    </Combobox.Option>
+                                  ))}
+                              </Combobox.Options>
+                            </div>
+                          </Combobox>
+                          {errors.StateID && (
+                            <p className="text-red-500 text-sm mt-1">{errors.StateID}</p>
+                          )}
+                        </div>
+                      </div>
 
                       <div>
                         <label className="block text-xs font-medium text-gray-700">City</label>
@@ -2160,7 +2035,7 @@ useEffect(() => {
                 <Box sx={{ flex: "1 1 auto" }} />
                 <button
                   variant="contained"
-                  onClick={handleCancel2}
+                  onClick={handleCancel}
                   className="inline-flex items-center gap-x-1.5 rounded-md bg-gray-300  px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover: hover:bg-gray-400 ml-2 mr-4"
                 >
                   <RxCross1 />
@@ -2173,18 +2048,17 @@ useEffect(() => {
                   }
                   className="inline-flex items-center gap-x-1.5 rounded-md bg-custom-darkblue px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-custom-lightblue hover:text-gray-700 "
                 >
-                  {activeStep === steps.length -3 ? "Submit" : "Next"}
+                  {activeStep === steps.length - 3 ? "Submit" : "Next"}
                   <MdOutlineArrowForwardIos />
                 </button>
-                
               </Box>
             </React.Fragment>
           )}
-          {showAlert && (
+          {/* {showAlert && (
             <div className="fixed top-0 right-0 w-full bg-green-500 text-white p-4 text-center">
               <span>Order added successfully!</span>
             </div>
-          )}
+          )} */}
           {submittedDetails && (
             <div className="mt-4 bg-gray-100 p-4 rounded shadow-lg">
               <h3 className="text-xl font-bold mb-4">
@@ -2266,7 +2140,7 @@ useEffect(() => {
               </p>
               <p>
                 <strong>Expected Complete Date:</strong>{" "}
-                {submittedDetails.ExpectedCompleteDate}
+                {submittedDetails.DeliveryDate}
               </p>
               <p>
                 <strong>Comments:</strong> {submittedDetails.Comments}

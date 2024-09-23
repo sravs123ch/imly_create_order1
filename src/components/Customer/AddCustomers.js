@@ -1,4 +1,3 @@
-
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CustomerContext } from "../../Context/customerContext";
@@ -17,7 +16,7 @@ import { ChevronUpDownIcon, CheckIcon } from "@heroicons/react/20/solid";
 import { IoMdAddCircleOutline } from "react-icons/io";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
-import LoadingAnimation from '../../components/Loading/LoadingAnimation';
+import LoadingAnimation from "../../components/Loading/LoadingAnimation";
 import {
   Table,
   TableBody,
@@ -28,51 +27,31 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import TableCell, { tableCellClasses } from "@mui/material/TableCell";
-import {CREATEORUPDATE_CUSTOMERS_API,CREATEORUPDATE_CUSTOMERS_ADDRESS_API, DELETE_CUSTOMERS_ADDRESS_API,ORDERBYCUSTOMERID_API,
-  COUNTRIES_API
-  ,STATES_API,CITIES_API,GETALLSTORES_API
- } from "../../Constants/apiRoutes";
-import { MdOutlineCancel } from 'react-icons/md';
+import {
+  CREATEORUPDATE_CUSTOMERS_API,
+  CREATEORUPDATE_CUSTOMERS_ADDRESS_API,
+  DELETE_CUSTOMERS_ADDRESS_API,
+  ORDERBYCUSTOMERID_API,
+  COUNTRIES_API,
+  STATES_API,
+  CITIES_API,
+  GETALLSTORES_API,
+  GETALLCUSTOMERSBYID_API,
+} from "../../Constants/apiRoutes";
+import { MdOutlineCancel } from "react-icons/md";
 import {
   StyledTableCell,
   StyledTableRow,
   TablePaginationActions,
 } from "../CustomTablePagination";
 
-// // Define Styled Components
-// const StyledTableCell = styled(TableCell)(({ theme }) => ({
-//   [`&.${tableCellClasses.head}`]: {
-//     backgroundColor: "#003375",
-//     // backgroundColor: '#F0E68C',
-//     color: theme.palette.common.white,
-//     fontWeight: "bold",
-//   },
-//   [`&.${tableCellClasses.body}`]: {
-//     fontSize: 14,
-//   },
-// }));
-
-// const StyledTableRow = styled(TableRow)(({ theme }) => ({
-//   "&:nth-of-type(even)": {
-//     backgroundColor: theme.palette.action.hover,
-//   },
-//   "&:last-child td, &:last-child th": {
-//     border: 0,
-//   },
-// }));
 
 const steps = ["Customer Details", "Address", "Orders"];
 const genderOptions = [
   { id: "M", name: "Male" },
   { id: "F", name: "Female" },
 ];
-const storeNames = [
-  { id: '1', name: 'ImlyStudio-Indiranagar' },
-  { id: '2', name: 'ImlyStudio-Jakkur' },
-  { id: '3', name: 'ImlyStudio-InfantryRoad' },
-  { id: '4', name: 'ImlyStudio-HSRLayout' },
-  { id: '5', name: 'ImlyStudio-HSRLayout' },
-  ];
+
 
 function AddCustomers() {
   const navigate = useNavigate();
@@ -110,6 +89,7 @@ function AddCustomers() {
     PhoneNumber: "",
     Gender: "",
     Comments: "",
+    Alternative_PhoneNumber:"",
   });
 
   const [addressFormData, setAddressFormData] = useState({
@@ -143,104 +123,19 @@ function AddCustomers() {
   const [countryMap, setCountryMap] = useState({});
   const [stateMap, setStateMap] = useState({});
   const [cityMap, setCityMap] = useState({});
-  const [addresses, setAddresses] = useState([]);
+  const [Addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [storeNames, setStoreNames] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [addressTableData, setAddressTableData] = useState([]); 
+  // const [addressTableData, setAddressTableData] = useState({ Addresses: [] });
 
-  // useEffect(() => {
-  //   if (isEditMode) {
-  //     const customer =
-  //       location.state?.customerDetails?.customer || customerDetails?.customer;
 
-  //     setCustomerFormData({
-  //       TenantID: customer?.TenantID || 1,
-  //       CustomerID: customer?.CustomerID || 0,
-  //       FirstName: customer?.FirstName || "",
-  //       LastName: customer?.LastName || "",
-  //       Email: customer?.Email || "",
-  //       Password: "",
-  //       ConfirmPassword: "",
-  //       PhoneNumber: customer?.PhoneNumber || "",
-  //       Gender: customer?.Gender || "",
-  //       Comments: customer?.Comments || "",
-  //     });
-
-  //     setAddressFormData({
-  //       CustomerID: customer?.CustomerID || 0,
-  //       AddressID: customer?.Addresses?.AddressID || 0,
-  //       AddressLine1: customer?.Addresses?.AddressLine1 || "",
-  //       AddressLine2: customer?.Addresses?.AddressLine2 || "",
-  //       CityID: customer?.Addresses?.CityID || "",
-  //       StateID: customer?.Addresses?.StateID || "",
-  //       CountryID: customer?.Addresses?.CountryID || "",
-  //       ZipCode: customer?.Addresses?.ZipCode || "",
-  //       Addresses: customer?.Addresses || [],
-  //     });
-
-  //     const address = customer?.Addresses?.[0]; // Get the first address (for simplicity)
-
-  //     if (address) {
-  //       // Find and set selected country
-  //       const selectedCountry =
-  //         countries.find(
-  //           (country) => country.CountryID === address.CountryID
-  //         ) || null;
-  //       if (selectedCountry) {
-  //         setSelectedCountry(selectedCountry);
-
-  //         // Fetch states based on selected country, if not already loaded
-  //         if (
-  //           !states.some(
-  //             (state) => state.CountryID === selectedCountry.CountryID
-  //           )
-  //         ) {
-  //           fetchStatesByCountry(selectedCountry.CountryID);
-  //         }
-  //       }
-
-  //       // Find and set selected state after country is set
-  //       const selectedState =
-  //         states.find((state) => state.StateID === address.StateID) || null;
-  //       if (selectedState) {
-  //         setSelectedState(selectedState);
-
-  //         // Fetch cities based on selected state, if not already loaded
-  //         if (!cities.some((city) => city.StateID === selectedState.StateID)) {
-  //           fetchCitiesByState(selectedState.StateID);
-  //         }
-  //       }
-
-  //       // Find and set selected city
-  //       const selectedCity =
-  //         cities.find((city) => city.CityID === address.CityID) || null;
-  //       setSelectedCity(selectedCity);
-  //     }
-
-  //     // Set the customer ID for further use
-  //     setCustomerId(customer?.CustomerID || 0);
-  //   }
-  // }, [
-  //   isEditMode,
-  //   location.state?.customerDetails?.customer,
-  //   customerDetails?.customer,
-  // ]);
-//  const [addressTableData, setAddressTableData] = useState({
-//   AddressLine1: "",
-//   AddressLine2: "",
-//   CityID: "",
-//   StateID: "",
-//   CountryID: "",
-//   ZipCode: "",
-//   Addresses: [],
-// });
-const [addressTableData, setAddressTableData] = useState([]); // Initial state is an empty array
-
-  
   useEffect(() => {
     if (isEditMode) {
       const customer =
         location.state?.customerDetails?.customer || customerDetails?.customer;
-  
+
       // Set customer form data
       setCustomerFormData({
         TenantID: customer?.TenantID || 1,
@@ -248,19 +143,21 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         FirstName: customer?.FirstName || "",
         LastName: customer?.LastName || "",
         Email: customer?.Email || "",
-        Password: "",
+        Password: customer?.Password|| "",
         ConfirmPassword: "",
         PhoneNumber: customer?.PhoneNumber || "",
         Gender: customer?.Gender || "",
         Comments: customer?.Comments || "",
+        Alternative_PhoneNumber: customer?.Alternative_PhoneNumber||"",
+
       });
-  
+
       // Set the selected gender
       const selectedGender = genderOptions.find(
         (gender) => gender.id === customer?.Gender
       );
       setSelectedGender(selectedGender || "");
-  
+
       // Initialize address form data
       const firstAddress = customer?.Addresses?.[0];
       setAddressTableData({
@@ -285,14 +182,13 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         ZipCode: "",
         Addresses: [],
       });
-  
-  
+
       // Set address table data
       setAddressTableData({
         CustomerID: customer?.CustomerID || 0,
         Addresses: customer?.Addresses || [], // Ensure Addresses array is set
       });
-  
+
       // Fetch states by country and cities by state based on the first address
       if (firstAddress?.CountryID) {
         fetchStatesByCountry(firstAddress.CountryID);
@@ -300,12 +196,12 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
       if (firstAddress?.StateID) {
         fetchCitiesByState(firstAddress.StateID);
       }
-  
+
       // Set the selected country, state, and city
       setSelectedCountry(firstAddress?.CountryID || null);
       setSelectedState(firstAddress?.StateID || null);
       setSelectedCity(firstAddress?.CityID || null);
-  
+
       // Set customer ID
       setCustomerId(customer?.CustomerID || 0);
     } else {
@@ -322,7 +218,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         Gender: "",
         Comments: "",
       });
-  
+
       setAddressFormData({
         CustomerID: 0,
         AddressID: 0,
@@ -334,7 +230,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         ZipCode: "",
         Addresses: [],
       });
-  
+
       setAddressTableData([]);
       setSelectedCountry(null);
       setSelectedState(null);
@@ -346,7 +242,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
     customerDetails?.customer,
     genderOptions,
   ]);
-  
+
   const handleGenderChange = (gender) => {
     setSelectedGender(gender);
     setCustomerFormData({ ...customerFormData, Gender: gender.id });
@@ -370,82 +266,50 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
 
   const [customerId, setCustomerId] = useState(null);
 
-  // const handleCustomerFormSubmit = async () => {
-  //   const customerApiUrl =
-  //     "https://imlystudios-backend-mqg4.onrender.com/api/customers/createOrUpdateCustomer";
-
-  //   try {
-  //     // Log the customer form data being sent to the API
-  //     console.log("Customer Form Data:", customerFormData);
-
-  //     // Create or update the customer
-  //     const customerResponse = await axios.post(
-  //       customerApiUrl,
-  //       customerFormData
-  //     );
-  //     console.log("Customer Response:", customerResponse);
-
-  //     const newCustomerId = customerResponse.data.CustomerID; // Ensure this is returned correctly
-
-  //     if (!newCustomerId) {
-  //       throw new Error("Failed to retrieve CustomerID from response.");
-  //     }
-
-  //     // Set the customerId in state, whether it's a new or existing customer
-  //     setCustomerId(newCustomerId);
-
-  //     console.log("Customer ID has been set:", newCustomerId);
-
-  //     return newCustomerId;
-  //   } catch (error) {
-  //     console.error("Customer submission failed:", error);
-
-  //     if (error.response) {
-  //       console.error("Response data:", error.response.data);
-  //       setError(
-  //         `Failed to ${
-  //           customerFormData.CustomerID ? "update" : "create"
-  //         } customer: ` + error.response.data.message
-  //       );
-  //     } else if (error.request) {
-  //       console.error("No response received:", error.request);
-  //       setError("No response received from server.");
-  //     } else {
-  //       console.error("Error in setting up request:", error.message);
-  //       setError("Error: " + error.message);
-  //     }
-  //   }
-  // };
   const handleCustomerFormSubmit = async () => {
     setIsLoading(true); // Show loading animation
     const customerApiUrl =
       // "https://imlystudios-backend-mqg4.onrender.com/api/customers/createOrUpdateCustomer";
-      CREATEORUPDATE_CUSTOMERS_API
+      CREATEORUPDATE_CUSTOMERS_API;
     try {
       // Log the customer form data being sent to the API
       console.log("Customer Form Data:", customerFormData);
-  
+
       // Create or update the customer
-      const customerResponse = await axios.post(customerApiUrl, customerFormData);
+      const customerResponse = await axios.post(
+        customerApiUrl,
+        customerFormData
+      );
       console.log("Customer Response:", customerResponse);
-  
-      const newCustomerId = customerResponse.data.CustomerID; // Ensure this is returned correctly
-  
+      setSuccessMessage("Customer created successfully");
+
+      const newCustomerId = customerResponse.data.CustomerID; 
+
       if (!newCustomerId) {
         throw new Error("Failed to retrieve CustomerID from response.");
       }
-  
-      // Set the customerId in state, whether it's a new or existing customer
       setCustomerId(newCustomerId);
       console.log("Customer ID has been set:", newCustomerId);
-  
-      // After successful customer registration, move to the next step
       handleNext();
-  
+
+      setCustomerFormData({
+        TenantID: 1,
+        CustomerID: 0,
+        FirstName: "",
+        LastName: "",
+        Email: "",
+        Password: "",
+        ConfirmPassword: "",
+        PhoneNumber: "",
+        Gender: "",
+        Comments: "",
+        Alternative_PhoneNumber:"",
+      });
+
       return newCustomerId;
     } catch (error) {
       console.error("Customer submission failed:", error);
-  
+
       if (error.response) {
         console.error("Response data:", error.response.data);
         setError(
@@ -460,15 +324,17 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         console.error("Error in setting up request:", error.message);
         setError("Error: " + error.message);
       }
-    }finally {
-      setIsLoading(false); // Hide loading animation
+    } finally {
+      setIsLoading(false);
     }
+   
   };
-  
-  
+
   // const handleAddressFormSubmit = async (customerId) => {
+  //   setIsLoading(true); // Show loading animation
   //   const addressesApiUrl =
-  //     "https://imlystudios-backend-mqg4.onrender.com/api/customers/createOrUpdateAddress";
+  //     // "https://imlystudios-backend-mqg4.onrender.com/api/customers/createOrUpdateAddress";
+  //     CREATEORUPDATE_CUSTOMERS_ADDRESS_API;
 
   //   try {
   //     // Push current form data into the Addresses array
@@ -491,6 +357,8 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   //     }));
 
   //     console.log("Updated Addresses Array:", addressFormData.Addresses);
+  //     setSuccessMessage("Customer Updated successfully");
+
 
   //     const addressData = {
   //       Addresses: addressFormData.Addresses,
@@ -509,6 +377,18 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
 
   //     const addressResponse = await axios.post(addressesApiUrl, addressData);
   //     console.log("Address Response:", addressResponse.data);
+
+  //     // After successfully submitting the address, move to the next step
+  //     // handleNext();
+  //     setAddressFormData({
+  //       AddressLine1: "",
+  //       AddressLine2: "",
+  //       CityID: "",
+  //       StateID: "",
+  //       CountryID: "",
+  //       ZipCode: "",
+  //       Addresses: [],
+  //     });
   //   } catch (error) {
   //     console.error("Address submission failed:", error);
 
@@ -525,20 +405,20 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   //       console.error("Error in setting up request:", error.message);
   //       setError("Error: " + error.message);
   //     }
+  //   } finally {
+  //     setIsLoading(false); // Hide loading animation
   //   }
   // };
-
+  
 
   const handleAddressFormSubmit = async (customerId) => {
     setIsLoading(true); // Show loading animation
-    const addressesApiUrl =
-      // "https://imlystudios-backend-mqg4.onrender.com/api/customers/createOrUpdateAddress";
-      CREATEORUPDATE_CUSTOMERS_ADDRESS_API;
+    const addressesApiUrl = CREATEORUPDATE_CUSTOMERS_ADDRESS_API;
   
     try {
-      // Push current form data into the Addresses array
       console.log("Address FormData", addressFormData);
   
+      // Create a new address object with values from form data
       const newAddress = {
         AddressID: addressFormData.AddressID || 0,
         AddressLine1: addressFormData.AddressLine1 || "",
@@ -549,16 +429,22 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
         ZipCode: addressFormData.ZipCode || "",
       };
   
-      // Add the new address to the Addresses array
+      // Ensure Addresses is defined and create a new array of addresses
+      const updatedAddresses = addressFormData.Addresses
+        ? [...addressFormData.Addresses, newAddress]
+        : [newAddress]; // Initialize Addresses if it's undefined
+  
+      // Update addressFormData with the new addresses
       setAddressFormData((prevState) => ({
         ...prevState,
-        Addresses: [...prevState.Addresses, newAddress],
+        Addresses: updatedAddresses, // Update the array
       }));
   
-      console.log("Updated Addresses Array:", addressFormData.Addresses);
+      console.log("Updated Addresses Array:", updatedAddresses);
   
+      // Prepare the address data to send to the API
       const addressData = {
-        Addresses: addressFormData.Addresses,
+        Addresses: updatedAddresses, // Updated array of addresses
         AddressID: newAddress.AddressID,
         CustomerID: customerId,
         TenantID: 1,
@@ -572,38 +458,58 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   
       console.log("Final Address Data for Submission:", addressData);
   
+      // Send the address data to the API
       const addressResponse = await axios.post(addressesApiUrl, addressData);
       console.log("Address Response:", addressResponse.data);
   
-      // After successfully submitting the address, move to the next step
-      handleNext();
-    } catch (error) {
-      console.error("Address submission failed:", error);
+      // Fetch updated customer data after successful submission
+      const updatedCustomer = await getCustomerById(customerId);
+      console.log("Updated Customer:", updatedCustomer);
   
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        setError(
-          "Failed to submit address: " +
-            (error.response.data.message || "Unknown error")
-        );
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-        setError("No response received from server.");
-      } else {
-        console.error("Error in setting up request:", error.message);
-        setError("Error: " + error.message);
-      }
-    }finally {
+      // Update the address table with the new data
+      setAddressTableData(updatedCustomer.Addresses || []); 
+  
+      // Reset the address form after submission
+      setAddressFormData({
+        AddressLine1: "",
+        AddressLine2: "",
+        CityID: "",
+        StateID: "",
+        CountryID: "",
+        ZipCode: "",
+        Addresses: [], 
+      });
+  
+      setSuccessMessage("Customer updated successfully");
+    } 
+   finally {
       setIsLoading(false); // Hide loading animation
     }
   };
   
+  // Fetch customer by ID
+  const getCustomerById = async (customerId) => {
+    try {
+      console.log("Fetching customer with ID:", customerId);
+      const response = await axios.get(`${GETALLCUSTOMERSBYID_API}/${customerId}`);
+      const customerData = response.data?.customer || {};
+
+      // Set customer data (addresses) in state
+      setAddressTableData({
+        Addresses: customerData.Addresses || [],
+      });
+    } catch (error) {
+      console.error("Error fetching customer:", error);
+    }
+  };
+
   
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const customerId = customerFormData.CustomerID;
-        console.log(customerId)
+        console.log(customerId);
 
         if (!customerId) return; // Ensure customerId exists
 
@@ -659,7 +565,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
 
     try {
       const response = await axios.get(
-        // `https://imlystudios-backend-mqg4.onrender.com/api/cities/getStatesByCountry?$filter=CountryID eq ${countryId}`    
+        // `https://imlystudios-backend-mqg4.onrender.com/api/cities/getStatesByCountry?$filter=CountryID eq ${countryId}`
         `${STATES_API}/${countryId}`
       );
       if (response.data.status === "SUCCESS") {
@@ -764,6 +670,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
       PhoneNumber: "",
       Gender: "",
       Comments: "",
+      Alternative_PhoneNumber:"",
     });
 
     // Reset address form data
@@ -792,16 +699,21 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState(null);
+ 
 
-
-  const handleEdit = (index) => {
-    // Extract the selected address using the index
-    const selectedAddress = addressTableData.Addresses[index];
+  const handleEdit = async (addressId) => {
+  console.log(addressId)
+    // Find the selected address using the AddressID
+    const selectedAddress = addressTableData.Addresses.find(
+      (address) => address.AddressID === addressId
+    );
   
     if (selectedAddress) {
       // Find the corresponding country, state, and city based on their IDs
       const selectedCountry =
-        countries.find((country) => country.CountryID === selectedAddress.CountryID) || {};
+        countries.find(
+          (country) => country.CountryID === selectedAddress.CountryID
+        ) || {};
       const selectedState =
         states.find((state) => state.StateID === selectedAddress.StateID) || {};
       const selectedCity =
@@ -836,31 +748,32 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   
       console.log("Editing Address Data:", selectedAddress);
     } else {
-      console.error("Selected address not found.");
+      console.error("Address with the specified AddressID not found.");
     }
   };
   
-  // const handleDelete = async (index) => {
-  //   // Get the AddressID of the selected address using the index
-  //   const selectedAddress = addressFormData.Addresses[index];
-  //   const addressId = selectedAddress.AddressID;
 
+  // const handleDelete = async (addressId) => {
+  //   console.log(addressId);
   //   if (!addressId) {
-  //     console.error("No AddressID found for this address.");
+  //     console.error("No AddressID provided.");
   //     return;
   //   }
 
-  //   const deleteApiUrl = `https://imlystudios-backend-mqg4.onrender.com/api/customers/deleteAddress/${addressId}`;
-
+  //   const deleteApiUrl =
+  //     // `https://imlystudios-backend-mqg4.onrender.com/api/customers/deleteAddress/${addressId}`;
+  //     `${DELETE_CUSTOMERS_ADDRESS_API}/${addressId}`;
   //   try {
   //     // Make a DELETE request to the API
   //     const response = await axios.delete(deleteApiUrl);
   //     console.log("Delete Response:", response.data);
-
+      
   //     // Remove the deleted address from the addressFormData state
   //     setAddressFormData((prevState) => ({
   //       ...prevState,
-  //       Addresses: prevState.Addresses.filter((_, i) => i !== index),
+  //       Addresses: prevState.Addresses.filter(
+  //         (address) => address.AddressID !== addressId
+  //       ),
   //     }));
 
   //     console.log("Address deleted successfully.");
@@ -871,86 +784,89 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
   //     }
   //   }
   // };
- 
-  const handleDelete = async (addressId) => {
-    if (!addressId) {
-      console.error("No AddressID provided.");
-      return;
-    }
-  
-    const deleteApiUrl = 
-    // `https://imlystudios-backend-mqg4.onrender.com/api/customers/deleteAddress/${addressId}`;
-  `${DELETE_CUSTOMERS_ADDRESS_API}/${addressId}`;
-    try {
-      // Make a DELETE request to the API
-      const response = await axios.delete(deleteApiUrl);
-      console.log("Delete Response:", response.data);
-  
-      // Remove the deleted address from the addressFormData state
-      setAddressFormData((prevState) => ({
-        ...prevState,
-        Addresses: prevState.Addresses.filter((address) => address.AddressID !== addressId),
-      }));
-  
-      console.log("Address deleted successfully.");
-    } catch (error) {
-      console.error("Error deleting address:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-      }
-    }
-  };
-  
 
+
+
+// Function to handle address deletion
+const handleDelete = async (addressId, customerId) => {
+  console.log("AddressID to delete:", addressId);
+  
+  if (!addressId) {
+    console.error("No AddressID provided.");
+    return;
+  }
+
+  const deleteApiUrl = `${DELETE_CUSTOMERS_ADDRESS_API}/${addressId}`;
+  
+  try {
+    // Make a DELETE request to the API
+    const response = await axios.delete(deleteApiUrl);
+    
+    console.log("Delete Response:", response.data);
+
+    // Remove the deleted address from the addressFormData state
+    setAddressFormData((prevState) => ({
+      ...prevState,
+      Addresses: prevState.Addresses.filter(
+        (address) => address.AddressID !== addressId
+      ),
+    }));
+
+    console.log("Address deleted successfully.");
+
+    // Fetch updated customer data after deletion
+    if (customerId) {
+      const updatedCustomer = await getCustomerById(customerId);
+      console.log("Updated Customer after deletion:", updatedCustomer);
+
+      // Update the address table with the new data
+      setAddressTableData(updatedCustomer.Addresses || []); // Ensure Addresses is an array
+    } else {
+      console.error("CustomerID is missing.");
+    }
+
+  } catch (error) {
+    console.error("Error deleting address:", error);
+    if (error.response) {
+      console.error("Response data:", error.response.data);
+    }
+  }
+};
+
+  
   const handleCancel = () => {
     navigate("/Customer");
   };
 
-  const handleAddressFormDataCancel = () => {
-    setAddressFormData({
-      AddressID: 0,
-      CustomerID: "",
-      TenantID: 1,
-      AddressLine1: "",
-      AddressLine2: "",
-      CityID: "",
-      StateID: "",
-      CountryID: "",
-      ZipCode: "",
-      Addresses: [],
-    });
-  };
-
+  
   useEffect(() => {
     const fetchStores = async () => {
       try {
         const response = await axios.get(GETALLSTORES_API);
         console.log("API Response:", response.data);
-        
+
         // Extract the Stores array from the API response
-        const storesData = response.data.Stores || []; 
-        
+        const storesData = response.data.Stores || [];
+
         // Check if it's an array and set store names
         setStoreNames(Array.isArray(storesData) ? storesData : []);
-        
       } catch (error) {
         console.error("Error fetching stores:", error);
       }
     };
-  
+
     fetchStores();
   }, []);
-  
 
   const handleStoreChange = (store) => {
     if (!store || !store.StoreID) {
       console.error("Invalid store selected:", store);
       return;
     }
-  
+
     setSelectedStore(store);
     console.log("Selected Store ID:", store.StoreID);
-  
+
     // Update formData with selected store ID and name
     setCustomerFormData({
       ...customerFormData,
@@ -958,16 +874,14 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
       // StoreName: store.StoreName,
     });
   };
-  
-  
+
+
 
   return (
     <>
       {/* <div className="p-8 mr-10 mb-7 sm:px-6 lg:px-8 pt-4 ml-10 lg:ml-80 w-1/8 mt-8 bg-white shadow-lg rounded-lg"> */}
       <div className="px-4 sm:px-6 lg:px-8 pt-4 sm:ml-10 lg:ml-72 w-auto shadow-lg rounded-lg bg-white">
         <Box sx={{ width: "100%" }}>
-
-
           <Stepper activeStep={activeStep} className="mb-6" alternativeLabel>
             {steps.map((label, index) => {
               const stepProps = {};
@@ -1023,144 +937,83 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
               >
                 {activeStep === 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                    {/* <div className="flex items-center gap-4 w-full">
-  <label htmlFor="storeName" className="w-1/3 text-xs font-medium text-gray-700">
-    Store Name
-  </label>
-  <div className="w-full">
-    <Combobox value={selectedStore} onChange={handleStoreChange}>
-      <div className="relative mt-1">
-        <Combobox.Input
-          id="storeName"
-          className="block w-full rounded-md border border-gray-400 py-2 px-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          displayValue={(store) => store?.name || ''}
-          placeholder="Select Store"
-        />
-        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-          <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-        </Combobox.Button>
-        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-          {storeNames.map((store) => (
-            <Combobox.Option
-              key={store.id}
-              className={({ active }) =>
-                `relative cursor-default select-none py-2 pl-3 pr-9 ${
-                  active ? 'bg-indigo-600 text-white' : 'text-gray-900'
-                }`
-              }
-              value={store}
-            >
-              {({ selected, active }) => (
-                <>
-                  <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>
-                    {store.name}
-                  </span>
-                  {selected && (
-                    <span
-                      className={`absolute inset-y-0 right-0 flex items-center pr-4 ${
-                        active ? 'text-white' : 'text-indigo-600'
-                      }`}
-                    >
-                      <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  )}
-                </>
-              )}
-            </Combobox.Option>
-          ))}
-        </Combobox.Options>
-      </div>
-    </Combobox>
-  </div>
-</div> */}
-{/* <div className="w-full">
-  <label htmlFor="storeName" className="block text-sm font-medium text-gray-700">
-    Store Name
-  </label>
-  <Combobox value={selectedStore} onChange={handleStoreChange}>
-    <div className="relative mt-1">
-      <Combobox.Input
-        id="storeName"
-        className="block w-full rounded-md border border-gray-400 py-2 px-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-        displayValue={(store) => store?.StoreName || ""}
-        placeholder="Select Store"
-      />
-      <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-        <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-      </Combobox.Button>
-      <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-        {storeNames.map((store) => (
-          <Combobox.Option
-            key={store.StoreID} // Use StoreID as the key
-            className={({ active }) =>
-              `relative cursor-default select-none py-2 pl-3 pr-9 ${active ? "bg-indigo-600 text-white" : "text-gray-900"}`
-            }
-            value={store}
-          >
-            {({ selected, active }) => (
-              <>
-                <span className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}>
-                  {store.StoreName} 
-                </span>
-                {selected && (
-                  <span className={`absolute inset-y-0 right-0 flex items-center pr-4 ${active ? "text-white" : "text-indigo-600"}`}>
-                    <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                )}
-              </>
-            )}
-          </Combobox.Option>
-        ))}
-      </Combobox.Options>
-    </div>
-  </Combobox>
-</div> */}
-<div className="flex items-center gap-4 w-full">
-  <label htmlFor="storeName" className="w-1/3 text-xs font-medium text-gray-700">
-    Store Name
-  </label>
-  <Combobox value={selectedStore} onChange={handleStoreChange} className="w-full">
-    <div className="relative mt-1">
-      <Combobox.Input
-        id="storeName"
-        className={`p-1 w-full border rounded-md ${
-          error ? "border-red-500" : "border-gray-400"
-        }`}
-        displayValue={(store) => store?.StoreName || ""}
-        placeholder="Select Store"
-      />
-      <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-        <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-      </Combobox.Button>
-      <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-        {storeNames.map((store) => (
-          <Combobox.Option
-            key={store.StoreID} // Use StoreID as the key
-            className={({ active }) =>
-              `relative cursor-default select-none py-2 pl-3 pr-9 ${active ? "bg-indigo-600 text-white" : "text-gray-900"}`
-            }
-            value={store}
-          >
-            {({ selected, active }) => (
-              <>
-                <span className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}>
-                  {store.StoreName} {/* Display the StoreName */}
-                </span>
-                {selected && (
-                  <span className={`absolute inset-y-0 right-0 flex items-center pr-4 ${active ? "text-white" : "text-indigo-600"}`}>
-                    <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                )}
-              </>
-            )}
-          </Combobox.Option>
-        ))}
-      </Combobox.Options>
-    </div>
-  </Combobox>
-</div>
+  
+                    <div className="flex items-center gap-4 w-full">
+                      <label
+                        htmlFor="storeName"
+                        className="w-1/3 text-xs font-medium text-gray-700"
+                      >
+                        Store Name
+                      </label>
+                      <Combobox
+                        value={selectedStore}
+                        onChange={handleStoreChange}
+                        className="w-full"
+                      >
+                        <div className="relative mt-1">
+                          <Combobox.Input
+                            id="storeName"
+                            className={`p-1 w-full border rounded-md ${
+                              error ? "border-red-500" : "border-gray-400"
+                            }`}
+                            displayValue={(store) => store?.StoreName || ""}
+                            placeholder="Select Store"
+                          />
+                          <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+                            <ChevronUpDownIcon
+                              className="h-5 w-5 text-gray-400"
+                              aria-hidden="true"
+                            />
+                          </Combobox.Button>
+                          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                            {storeNames.map((store) => (
+                              <Combobox.Option
+                                key={store.StoreID} // Use StoreID as the key
+                                className={({ active }) =>
+                                  `relative cursor-default select-none py-2 pl-3 pr-9 ${
+                                    active
+                                      ? "bg-indigo-600 text-white"
+                                      : "text-gray-900"
+                                  }`
+                                }
+                                value={store}
+                              >
+                                {({ selected, active }) => (
+                                  <>
+                                    <span
+                                      className={`block truncate ${
+                                        selected
+                                          ? "font-semibold"
+                                          : "font-normal"
+                                      }`}
+                                    >
+                                      {store.StoreName}{" "}
+                                      {/* Display the StoreName */}
+                                    </span>
+                                    {selected && (
+                                      <span
+                                        className={`absolute inset-y-0 right-0 flex items-center pr-4 ${
+                                          active
+                                            ? "text-white"
+                                            : "text-indigo-600"
+                                        }`}
+                                      >
+                                        <CheckIcon
+                                          className="h-5 w-5"
+                                          aria-hidden="true"
+                                        />
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </Combobox.Option>
+                            ))}
+                          </Combobox.Options>
+                        </div>
+                      </Combobox>
+                    </div>
 
-<div></div>
+                    <div></div>
                     {/* First Name */}
                     <div className="flex items-center gap-4">
                       <label className="w-1/3 text-xs font-medium text-gray-700">
@@ -1209,10 +1062,6 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       />
                     </div>
 
-                    
- 
-
-
                     {/* Email */}
                     <div className="flex items-center gap-4">
                       <label className="w-1/3 text-xs font-medium text-gray-700">
@@ -1229,16 +1078,20 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       />
                     </div>
                     <div className="flex items-center gap-4">
-    <label className="w-1/3 text-xs font-medium text-gray-700">Alternate Phone Number</label>
-    <input
-      type="text"
-      name="AlternatePhoneNumber"
-      value={customerFormData.AlternatePhoneNumber}
-      onChange={handleCustomerFormChange}
-
-      className={`p-1 w-full border rounded-md ${error ? 'border-red-500' : 'border-gray-400'}`}
-    />
-  </div>
+                      <label className="w-1/3 text-xs font-medium text-gray-700">
+                        Alternate Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        name="Alternative_PhoneNumber"
+                        value={customerFormData.Alternative_PhoneNumber
+                        }
+                        onChange={handleCustomerFormChange}
+                        className={`p-1 w-full border rounded-md ${
+                          error ? "border-red-500" : "border-gray-400"
+                        }`}
+                      />
+                    </div>
 
                     {/* Password */}
                     <div className="flex items-center gap-4">
@@ -1256,21 +1109,6 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       />
                     </div>
 
-                    {/* Confirm Password */}
-                    {/* <div className="flex items-center gap-4">
-                      <label className="w-1/3 text-xs font-medium text-gray-700">
-                        Confirm Password
-                      </label>
-                      <input
-                        type="password"
-                        name="ConfirmPassword"
-                        value={customerFormData.ConfirmPassword}
-                        onChange={handleCustomerFormChange}
-                        className={`p-1 w-full border rounded-md ${
-                          error ? "border-red-500" : "border-gray-400"
-                        }`}
-                      />
-                    </div> */}
 
                     {/* Gender */}
                     <div className="flex items-center gap-4">
@@ -1338,7 +1176,6 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                         </div>
                       </Combobox>
                     </div>
-
 
                     <div className="flex flex-col gap-4">
                       {/* Referred By Field */}
@@ -1513,7 +1350,6 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       )}
                     </div>
 
-                    
                     {/* Comments */}
                     <div className="flex items-center gap-4">
                       <label className="w-1/3 text-xs font-medium text-gray-700">
@@ -1528,51 +1364,40 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       />
                     </div>
 
-                    {/* <div className="mt-6 flex justify-end gap-4">
+                 
+                    <div className="flex justify-end gap-2 col-span-2">
                       <button
                         type="submit"
+                        className="button-base save-btn"
                         onClick={handleCustomerFormSubmit}
-                        className="inline-flex justify-center rounded-md border border-transparent bg-custom-darkblue py-2 px-4 text-sm font-medium text-white hover:text-black shadow-sm hover:bg-custom-lightblue focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                       >
                         Save
                       </button>
                       <button
                         type="button"
                         onClick={handleCancel}
-                        className="inline-flex justify-center rounded-md border border-transparent bg-red-500 py-2 px-4 text-sm font-medium text-white hover:text-black shadow-sm hover:bg-red-200"
+                        className="button-base cancel-btn"
                       >
                         Cancel
                       </button>
-                    </div> */}
-                      <div className="flex justify-end gap-2 col-span-2">
-                      <button
-        type="submit"
-        className="button-base save-btn"
-        onClick={handleCustomerFormSubmit}
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        onClick={handleCancel}
-        className="button-base cancel-btn"
-      >
-        Cancel
-      </button>
+                    </div>
+                    {successMessage && (
+          <div className="mt-4 text-green-600 text-center">
+            {successMessage}
+          </div>
+        )}
+                
+                     {isLoading && (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50 bg-gray-700">
+        <LoadingAnimation />
       </div>
-      {/* {isLoading && <LoadingAnimation />} */}
-      {isLoading && (
- <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
-    <LoadingAnimation />
-  </div>
-)}
-
+    )}
                   </div>
                 )}
                 {activeStep === 1 && (
                   <div>
                     {/* Address Form */}
-                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="flex items-center gap-4">
                         <label className="w-1/3 text-xs font-medium text-gray-700">
                           Address Line 1
@@ -1786,59 +1611,39 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                       </div>
 
                     
-                      {/* <div className="flex justify-end col-span-2"> */}
-                        {/* <button
+                      <div className="flex justify-end gap-2 col-span-2">
+                        <button
+                          type="submit"
+                          className="button-base save-btn"
                           onClick={() => {
                             handleAddressFormSubmit(customerId); // Handle the form submission for a specific customer
                           }}
-                          className="inline-flex items-center gap-x-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
                         >
-                          Add{" "}
-                          <span className="text-lg">
-                            <IoMdAddCircleOutline />
-                          </span>
-                        </button> */}
-                      
-                    
-                         
-      {/* <button
-        type="button"
-        onClick={handleCancel}
-        className="inline-flex justify-center rounded-md border border-transparent bg-red-500 py-2 px-4 text-sm font-medium text-white hover:text-black shadow-sm hover:bg-red-200 ml-2" // Added ml-2 here
-      >
-        Cancel
-      </button> */}
-      
-  
-                      {/* </div> */}
-                      <div className="flex justify-end gap-2 col-span-2">
-                      <button
-        type="submit"
-        className="button-base save-btn"
-        onClick={() => {
-          handleAddressFormSubmit(customerId); // Handle the form submission for a specific customer
-        }}
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        onClick={handleCancel}
-        className="button-base cancel-btn"
-      >
-        Cancel
-      </button>
-      </div>
-      {isLoading && (
- <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50">
-    <LoadingAnimation />
-  </div>
-)}
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancel}
+                          className="button-base cancel-btn"
+                        >
+                          Cancel
+                        </button>
+                      </div>
 
-                    </div> 
-                   
-                    {/* <TableContainer component={Paper} className="mt-4" sx={{ width: '80%' }}> */}
-                    <TableContainer
+                      {successMessage && (
+          <div className="mt-4 text-green-600 text-center">
+            {successMessage}
+          </div>
+        )}
+                     
+                        {isLoading && (
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-50 bg-gray-700">
+        <LoadingAnimation />
+      </div>
+    )}
+                    </div>
+
+                     <TableContainer
                       component={Paper}
                       sx={{ width: "90%", margin: "0 auto", mt: 4 }}
                     >
@@ -1853,9 +1658,9 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                             <StyledTableCell>Actions</StyledTableCell>
                           </TableRow>
                         </TableHead>
-                        <TableBody>
+                        {/* <TableBody>
                           {addressTableData.Addresses &&
-                           addressTableData.Addresses.map((address, index) => {
+                            addressTableData.Addresses.map((address, index) => {
                               if (typeof address === "object") {
                                 // Resolve City and State names from their respective maps
                                 const cityName =
@@ -1884,194 +1689,157 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                                     <StyledTableCell>
                                       {address.ZipCode || ""}
                                     </StyledTableCell>
+
+                                    <StyledTableCell>
                                     
-                   <StyledTableCell>
-  {/* <button
-    type="button"
-    onClick={() => handleEdit(index)}
-    className="m-0.5 inline-flex items-center justify-center gap-x-2 rounded-md bg-blue-600 px-1 py-0.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-500 w-20 h-8"
-  >
-    <AiOutlineEdit aria-hidden="true" className="h-4 w-4" />
-    Edit
-  </button>
-  <div key={address.AddressID}>
-    <button
-      type="button"
-      onClick={() => handleDelete(address.AddressID)} // Passing AddressID
-      className="inline-flex items-center justify-center gap-x-2 m-0.5 rounded-md bg-red-600 px-1 py-0.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500 w-20 h-8"
-    >
-      <AiOutlineDelete aria-hidden="true" className="h-4 w-4" />
-      Delete
-    </button>
-  </div> */}
-    {/* <button
-  type="button"
-  onClick={() => handleEdit(index)}
-  className="button edit-button"
->
-  <AiOutlineEdit aria-hidden="true" className="h-4 w-4" />
-  Edit
-</button>
+                                      <div className="button-container">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEdit(address.AddressID)}
+                                          className="button edit-button"
+                                        >
+                                          <AiOutlineEdit
+                                            aria-hidden="true"
+                                            className="h-4 w-4"
+                                          />
+                                          Edit
+                                        </button>
 
-<button
-  type="button"
-  onClick={() => handleDelete(address.AddressID)}
-  className="button delete-button"
->
-  <MdOutlineCancel aria-hidden="true" className="h-4 w-4" />
-  Delete
-</button> */}
-<div className="button-container">
-  <button
-    type="button"
-    onClick={() => handleEdit(index)}
-    className="button edit-button"
-  >
-    <AiOutlineEdit aria-hidden="true" className="h-4 w-4" />
-    Edit
-  </button>
-
-  <button
-    type="button"
-    onClick={() => handleDelete(address.AddressID)}
-    className="button delete-button"
-  >
-    <MdOutlineCancel aria-hidden="true" className="h-4 w-4" />
-    Delete
-  </button>
-</div>
-
-</StyledTableCell>
-
-
-
-                                  </TableRow>
-                                );
-                              } else if (typeof address === "string") {
-                                const addressParts = address.split(", ");
-                                return (
-                                  <TableRow key={index}>
-                                    <StyledTableCell>
-                                      {addressParts[0] || ""}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {addressParts[1] || ""}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {addressParts[2] || ""}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {addressParts[3] || ""}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {addressParts[4] || ""}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      <Button
-                                        onClick={() => handleEdit(index)}
-                                        startIcon={<FaEdit />}
-                                        variant="contained"
-                                        color="primary"
-                                        size="small"
-                                        className="mr-2"
-                                      >
-                                        Edit
-                                      </Button>
-                                      <Button
-                                        onClick={() => handleDelete(index)}
-                                        startIcon={<FaTrashAlt />}
-                                        variant="contained"
-                                        color="secondary"
-                                        size="small"
-                                      >
-                                        Delete
-                                      </Button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleDelete(address.AddressID)
+                                          }
+                                          className="button delete-button"
+                                        >
+                                          <MdOutlineCancel
+                                            aria-hidden="true"
+                                            className="h-4 w-4"
+                                          />
+                                          Delete
+                                        </button>
+                                      </div>
                                     </StyledTableCell>
                                   </TableRow>
                                 );
                               }
                               return null;
                             })}
+                        </TableBody> */}
+
+<TableBody>
+  {addressTableData && Array.isArray(addressTableData.Addresses) && addressTableData.Addresses.length > 0 ? (
+    addressTableData.Addresses.map((address, index) => {
+      if (typeof address === "object") {
+        const cityName = Object.keys(cityMap).find(
+          (key) => cityMap[key] === address.CityID
+        ) || "N/A";
+        const stateName = Object.keys(stateMap).find(
+          (key) => stateMap[key] === address.StateID
+        ) || "N/A";
+
+        return (
+          <TableRow key={index}>
+            <StyledTableCell>{address.AddressLine1 || ""}</StyledTableCell>
+            <StyledTableCell>{address.AddressLine2 || ""}</StyledTableCell>
+            <StyledTableCell>{cityName}</StyledTableCell>
+            <StyledTableCell>{stateName}</StyledTableCell>
+            <StyledTableCell>{address.ZipCode || ""}</StyledTableCell>
+            <StyledTableCell>
+              <div className="button-container">
+                <button
+                  type="button"
+                  onClick={() => handleEdit(address.AddressID)}
+                  className="button edit-button"
+                >
+                  <AiOutlineEdit aria-hidden="true" className="h-4 w-4" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(address.AddressID, customerId)} // Pass customerId here
+                  className="button delete-button"
+                >
+                  <MdOutlineCancel aria-hidden="true" className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            </StyledTableCell>
+          </TableRow>
+        );
+      }
+      return null;
+    })
+  ) : (
+    <TableRow>
+      <StyledTableCell colSpan={6}>No addresses found</StyledTableCell>
+    </TableRow>
+  )}
+</TableBody>
+
+
+
+                        
+                      </Table>
+                    </TableContainer> 
+
+
+
+                  </div>
+                )}
+
+                {activeStep === 2 && (
+                  <>
+                    <TableContainer
+                      component={Paper}
+                      sx={{ width: "90%", margin: "0 auto", mt: 4 }}
+                    >
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <StyledTableCell>Order Name</StyledTableCell>
+                            <StyledTableCell>Order Date</StyledTableCell>
+                            <StyledTableCell>Total Amount</StyledTableCell>
+                            <StyledTableCell>Order Status</StyledTableCell>
+                          </TableRow>
+                        </TableHead>
+
+                        <TableBody>
+                          {orders.map((order) => (
+                            <StyledTableRow key={order.OrderID}>
+                              <StyledTableCell>
+                                {order.OrderNumber}
+                              </StyledTableCell>
+                              <StyledTableCell>
+                                {new Date(order.OrderDate).toLocaleDateString()}
+                              </StyledTableCell>
+                              <StyledTableCell>
+                                ${order.TotalAmount}
+                              </StyledTableCell>
+                              <StyledTableCell>
+                                {order.OrderStatus}
+                              </StyledTableCell>
+                            </StyledTableRow>
+                          ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
 
-                    <div className="mt-6 flex justify-end gap-4">
-                      {/* <button
-              type="submit"
-              // onClick={handleAddressFormSubmit}
-              // When calling the function, ensure customerId is not an event
-          //  onClick={() => handleAddressFormSubmit(customerId)}
-
-              className="inline-flex justify-center rounded-md border border-transparent bg-custom-darkblue py-2 px-4 text-sm font-medium text-white hover:text-black shadow-sm hover:bg-custom-lightblue focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              Save
-            </button> */}
-                      {/* <button
-              type="button"
-              onClick={handleCancel}
-              className="inline-flex justify-center rounded-md border border-transparent bg-red-500 py-2 px-4 text-sm font-medium text-white hover:text-black shadow-sm hover:bg-red-200"
-            >
-              Cancel
-            </button> */}
+                    {/* Cancel Button aligned to the left */}
+                    <div className="mt-4 flex justify-end">
+                    
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="button-base cancel-btn"
+                      >
+                        Cancel
+                      </button>
                     </div>
-                  </div>
+                  </>
                 )}
-             
-                   {activeStep === 2 && (
-  <>
-    <TableContainer
-      component={Paper}
-      sx={{ width: "90%", margin: "0 auto", mt: 4 }}
-    >
-      <Table>
-        <TableHead>
-          <TableRow>
-            <StyledTableCell>Order Name</StyledTableCell>
-            <StyledTableCell>Order Date</StyledTableCell>
-            <StyledTableCell>Total Amount</StyledTableCell>
-            <StyledTableCell>Order Status</StyledTableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {orders.map((order) => (
-            <StyledTableRow key={order.OrderID}>
-              <StyledTableCell>{order.OrderNumber}</StyledTableCell>
-              <StyledTableCell>
-                {new Date(order.OrderDate).toLocaleDateString()}
-              </StyledTableCell>
-              <StyledTableCell>${order.TotalAmount}</StyledTableCell>
-              <StyledTableCell>{order.OrderStatus}</StyledTableCell>
-            </StyledTableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-
-    {/* Cancel Button aligned to the left */}
-    <div className="mt-4 flex justify-end">
-      {/* <button
-        type="button"
-        onClick={handleCancel}
-        className="inline-flex justify-center rounded-md border border-transparent bg-red-500 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-200 hover:text-black"
-      >
-        Cancel
-      </button> */}
-        <button
-        type="button"
-        onClick={handleCancel}
-        className="button-base cancel-btn"
-      >
-        Cancel
-      </button>
-    </div>
-  </>
-)}
-
-                
               </Box>
-              
+
               <Box
                 sx={{ display: "flex", flexDirection: "row", pt: 2 }}
                 className="justify-between"
@@ -2091,7 +1859,7 @@ const [addressTableData, setAddressTableData] = useState([]); // Initial state i
                 >
                   {activeStep === steps.length - 1 ? (isEditMode ? 'Update' : 'Submit') : 'Next'}
                 </Button> */}
-                
+
                 <Button
                   onClick={() => handleNext()}
                   className="bg-blue-500 text-white hover:bg-blue-700 px-4 py-2 rounded"
